@@ -21,52 +21,56 @@ def extractFeatures(labelFile, pathPrefix):
     df = pd.read_csv(labelFile)
     row, col = df.shape
 
-    colorHist = ColorHistogram(4, 4, 32)
-    gamma = Gamma(0.4)
-    resize = (512, 512)
+    colorHist = ColorHistogram(2, 2, 64)
+    gamma1 = Gamma(1.5)
+    gamma2 = Gamma(0.6)
+    resize = (432, 432)
 
-    X = np.empty([row, 4*4*32*3])
+    X = np.empty([row, 2*2*2*64*3])
     Y = np.zeros([row], dtype=np.int16)
     for i in range(row):
         imageId = df['image_id'][i]
         label = df['label'][i]
         Y[i] = getLabelIndex(label)
         image = cv.imread(pathPrefix+imageId, 1)
-        image = gamma.extract(image)
-        width, height = image.shape
-        image = cv.resize(image[16:width-16, 16:height-16], resize)
-        X[i] = colorHist.extract(image, normalize=True)
+        image1 = gamma1.extract(image)
+        image1 = cv.resize(image1, resize)
+        image2 = gamma2.extract(image)
+        image2 = cv.resize(image2, resize)
+        X[i][0:768] = colorHist.extract(image1, normalize=True)
+        X[i][768:1536] = colorHist.extract(image2, normalize=True)
         print(pathPrefix+imageId)
 
     return X, Y
 
 
 def main():
-#    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
-#    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
-#    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
-#    validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
-#
-#    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
-#    validX, validY = extractFeatures(validLabelFile, validPrefix)
-#
-#    np.save('./train_x.npz', trainX)
-#    np.save('./train_y.npz', trainY)
-#    np.save('./val_x.npz', validX)
-#    np.save('./val_y.npz', validY)
+    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
+    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
+    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
+    validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
 
-    trainX = np.load('train_x.npz.npy')
-    trainY = np.load('train_y.npz.npy')
-    validX = np.load('val_x.npz.npy')
-    validY = np.load('val_y.npz.npy')
+    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
+    validX, validY = extractFeatures(validLabelFile, validPrefix)
+
+    np.save('./train_x.npy', trainX)
+    np.save('./train_y.npy', trainY)
+    np.save('./val_x.npy', validX)
+    np.save('./val_y.npy', validY)
+
+#    trainX = np.load('train_x.npy')
+#    trainY = np.load('train_y.npy')
+#    validX = np.load('val_x.npy')
+#    validY = np.load('val_y.npy')
 
     model = SVM(penalty='l2', loss='squared_hinge',
-            C=0.85, maxIter=2000)
+            C=0.87, maxIter=2000)
     print("SVM: Training get started.")
     model.train(trainX, trainY)
 
     print("SVM: Validation get started.")
-    acc = model.valid(validX, validY)
+    acc, metrics = model.valid(validX, validY, classNum=3)
     print(acc)
+    print(metrics)
 
 main()

@@ -31,12 +31,21 @@ class SVM():
         self._model.fit(X, Y)
         self._isTrained = True
 
-    def valid(self, X, Y):
+    def valid(self, X, Y, classNum = 3):
         if self._isTrained == False:
             print("SVM::valid(): model have not been trained.")
             return
 
-        return self._model.score(X, Y)
+        prediction = self._model.predict(X)
+        dataSize = X.shape[0]
+        acc = 0.0
+        metrics = np.zeros((classNum, classNum), dtype=np.int16)
+        for i in range(dataSize):
+            if  prediction[i] == Y[i]:
+                acc += 1.0
+            metrics[int(Y[i])][int(prediction[i])] += 1
+        
+        return acc / dataSize, metrics
 
     def test(self, X):
         if self._isTrained == False:
