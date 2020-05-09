@@ -98,8 +98,8 @@ def main():
     trainPreprocess = imagePreprocess(trainLabelFile, trainPrefix)
     validPreprocess = imagePreprocess(validLabelFile, validPrefix)
 
-    trainPreprocess = trainPrefix[:-1] + '_preprocess/'
-    validPreprocess = validPrefix[:-1] + '_preprocess/'
+#    trainPreprocess = trainPrefix[:-1] + '_preprocess/'
+#    validPreprocess = validPrefix[:-1] + '_preprocess/'
 
     trainX, trainY = extractFeatures(trainLabelFile, trainPreprocess)
     validX, validY = extractFeatures(validLabelFile, validPreprocess)
