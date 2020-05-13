@@ -28,6 +28,10 @@ class SVM():
             print("SVM:: model have been trained.")
             return
 
+        self._mean = np.mean(X, axis=0)
+        for i in range(X.shape[0]):
+            X[i] -= self._mean
+
         self._model.fit(X, Y)
         self._isTrained = True
 
@@ -36,8 +40,11 @@ class SVM():
             print("SVM::valid(): model have not been trained.")
             return
 
-        prediction = self._model.predict(X)
         dataSize = X.shape[0]
+        for i in range(dataSize):
+            X[i] -= self._mean
+
+        prediction = self._model.predict(X)
         acc = 0.0
         metrics = np.zeros((classNum, classNum), dtype=np.int16)
         for i in range(dataSize):
