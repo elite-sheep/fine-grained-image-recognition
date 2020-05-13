@@ -7,16 +7,18 @@ class ColorHistogram():
     def __init__(self, 
             dividX = 1, 
             dividY = 1, 
-            pixelBinNum = 256):
+            pixelBinNum = 256,
+            channels = 3):
         self._dividX = dividX;
         self._dividY = dividY;
         self._pixelBinNum = pixelBinNum;
+        self._channels = channels
 
     def extract(self, image, normalize = False):
         pixelBinSize = 256 / self._pixelBinNum
         height = image.shape[0]
         width = image.shape[1]
-        channel = image.shape[2]
+        channel = self._channels
 
         patchX = int(width / self._dividX)
         patchY = int(height / self._dividY)
@@ -31,7 +33,11 @@ class ColorHistogram():
                         curRow = py * patchY + row
                         curCol = px * patchX + col
                         for c in range(channel):
-                            pixel = image[curRow, curCol][c]
+                            pixel = 0
+                            if channel > 1:
+                                pixel = image[curRow, curCol][c]
+                            else:
+                                pixel = image[curRow, curCol]
                             binIndex = pixel / pixelBinSize
                             index = (px * self._dividY + py) * channel * self._pixelBinNum + self._pixelBinNum * c + binIndex
                             outFeatures[int(index)] += 1.0
