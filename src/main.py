@@ -6,6 +6,7 @@ import pandas as pd
 
 from features.color_histogram import ColorHistogram
 from features.gamma import Gamma
+from models.alexnet import AlexNet
 from models.svm import SVM
 
 def getLabelIndex(label):
@@ -46,6 +47,8 @@ def extractFeatures(labelFile, pathPrefix):
 
 
 def main():
+    x = tf.place:wq
+
 #    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
 #    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
 #    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
@@ -59,19 +62,19 @@ def main():
 #    np.save('./val_x.npy', validX)
 #    np.save('./val_y.npy', validY)
 
-    trainX = np.load('./bin/exp2/train_x.npz.npy')
-    trainY = np.load('./bin/exp2/train_y.npz.npy')
-    validX = np.load('./bin/exp2/val_x.npz.npy')
-    validY = np.load('./bin/exp2/val_y.npz.npy')
-
-    model = SVM(penalty='l2', loss='squared_hinge',
-            C=0.85, maxIter=2000)
-    print("SVM: Training get started.")
-    model.train(trainX, trainY)
-
-    print("SVM: Validation get started.")
-    acc, metrics = model.valid(validX, validY, classNum=3)
-    print(acc)
-    print(metrics)
+#    trainX = np.load('./bin/exp2/train_x.npz.npy')
+#    trainY = np.load('./bin/exp2/train_y.npz.npy')
+#    validX = np.load('./bin/exp2/val_x.npz.npy')
+#    validY = np.load('./bin/exp2/val_y.npz.npy')
+#
+#    model = SVM(penalty='l2', loss='squared_hinge',
+#            C=0.85, maxIter=2000)
+#    print("SVM: Training get started.")
+#    model.train(trainX, trainY)
+#
+#    print("SVM: Validation get started.")
+#    acc, metrics = model.valid(validX, validY, classNum=3)
+#    print(acc)
+#    print(metrics)
 
 main()
