@@ -71,10 +71,14 @@ def main():
     validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
 
     trainX, trainY = loadAllImages(trainLabelFile, trainPrefix)
-    validX, validY = loadAllImages(validLabelFile, validPrefix)
+    testX, testY = loadAllImages(validLabelFile, validPrefix)
 
     trainX = np.array(trainX, dtype=np.float32)
-    validX = np.array(trainX, dtype=np.float32)
+    testX = np.array(trainX, dtype=np.float32)
+
+    validIndicies = np.random.choice(testX.shape[0], 75)
+    validX = testX[validIndicies]
+    validY = testY[validIndicies]
 
     model = AlexNet()
     model.train(weightsSavePath = './bin/exp5/', 
