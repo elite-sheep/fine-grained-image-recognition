@@ -29,7 +29,7 @@ def extractFeatures(labelFile, pathPrefix):
 
     X = np.empty([row, 2*4*4*16*3])
     Y = np.zeros([row], dtype=np.int16)
-    for i in range(row):
+    for i in range(10):
         imageId = df['image_id'][i]
         label = df['label'][i]
         Y[i] = getLabelIndex(label)
@@ -45,14 +45,42 @@ def extractFeatures(labelFile, pathPrefix):
 
     return X, Y
 
+def loadAllImages(labelFile, prefix):
+    df = pd.read_csv(labelFile)
+    row, col = df.shape
+
+    resize = (224, 224)
+    X = []
+    Y = np.zeros([row, 3], dtype=np.float32)
+    for i in range(row):
+        imageId = df['image_id'][i]
+        label = df['label'][i]
+        y = getLabelIndex(label)
+        Y[i][y] = 1.0
+        image = cv.imread(prefix+imageId, 1)
+        image = cv.resize(image, resize)
+        X.append(image)
+        print(prefix+imageId)
+
+    return X, Y
 
 def main():
-    x = tf.place:wq
+    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
+    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
+    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
+    validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
 
-#    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
-#    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
-#    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
-#    validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
+    trainX, trainY = loadAllImages(trainLabelFile, trainPrefix)
+    validX, validY = loadAllImages(validLabelFile, validPrefix)
+
+    trainX = np.array(trainX, dtype=np.float32)
+    validX = np.array(trainX, dtype=np.float32)
+
+    model = AlexNet()
+    model.train(weightsSavePath = './bin/exp5/', 
+            batches=24000, batchSize=128, learningRate=0.01, X=trainX, 
+            Y=trainY, validX=validX, validY=validY, decayStep=[1000, 8000, 16000])
+    model.evaluate(validX, validY)
 #
 #    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
 #    validX, validY = extractFeatures(validLabelFile, validPrefix)
