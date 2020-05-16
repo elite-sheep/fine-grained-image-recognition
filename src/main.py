@@ -43,7 +43,7 @@ def extractFeatures(labelFile, pathPrefix):
         X[i] /= np.linalg.norm(X[i])
         print(pathPrefix+imageId)
 
-    return X, Y
+    return np.array(X), Y
 
 def loadAllImages(labelFile, prefix):
     df = pd.read_csv(labelFile)
@@ -58,11 +58,17 @@ def loadAllImages(labelFile, prefix):
         y = getLabelIndex(label)
         Y[i][y] = 1.0
         image = cv.imread(prefix+imageId, 1)
-        image = cv.resize(image, resize)
+        if image.shape[0] < image.shape[1]:
+            image = cv.rotate(image, cv.ROTATE_90_CLOCKWISE)
+        image = cv.resize(image, resize).astype(np.float32)
+        image /= 255.0
+        image[:,:,0] = image[:,:,0] - 0.485
+        image[:,:,1] = image[:,:,1] - 0.456
+        image[:,:,2] = image[:,:,2] - 0.406
         X.append(image)
         print(prefix+imageId)
 
-    return X, Y
+    return np.array(X), Y
 
 def main():
     trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
@@ -73,18 +79,15 @@ def main():
     trainX, trainY = loadAllImages(trainLabelFile, trainPrefix)
     testX, testY = loadAllImages(validLabelFile, validPrefix)
 
-    trainX = np.array(trainX, dtype=np.float32)
-    testX = np.array(trainX, dtype=np.float32)
-
     validIndicies = np.random.choice(testX.shape[0], 75)
     validX = testX[validIndicies]
     validY = testY[validIndicies]
 
     model = AlexNet()
     model.train(weightsSavePath = './bin/exp5/', 
-            batches=24000, batchSize=128, learningRate=0.01, X=trainX, 
-            Y=trainY, validX=validX, validY=validY, decayStep=[1000, 8000, 16000])
-    model.evaluate(validX, validY)
+            batches=9000, batchSize=128, learningRate=0.1, X=trainX, 
+            Y=trainY, validX=validX, validY=validY, decayStep=[3480, 5000])
+    model.evaluate(testX, testY)
 #
 #    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
 #    validX, validY = extractFeatures(validLabelFile, validPrefix)

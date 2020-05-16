@@ -23,14 +23,14 @@ class AlexNet(object):
         # 1st layer
         model.add(tf.keras.layers.Conv2D(input_shape=self._inputShape, 
             filters=96, kernel_size=[11, 11], strides=[4, 4],
-            activation='relu', padding='same'))
-        model.add(maxPool(3, 3, 2, 2, padding='VALID', name='pool1'))
-        model.add(tf.keras.layers.BatchNormalization())
+            activation='relu', padding='valid'))
+        model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
+        model.add(maxPool(3, 3, 2, 2, padding='valid', name='pool1'))
 
         # 2nd layer
         model.add(conv(5, 5, 256, 1, 1, name='conv2'))
-        model.add(maxPool(3, 3, 2, 2, padding='VALID', name='pool2'))
-        model.add(tf.keras.layers.BatchNormalization())
+        model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
+        model.add(maxPool(3, 3, 2, 2, padding='valid', name='pool2'))
 
         # 3rd layer
         model.add(conv(3, 3, 384, 1, 1, name='conv3'))
@@ -40,7 +40,7 @@ class AlexNet(object):
 
         # 5th layer
         model.add(conv(3, 3, 256, 1, 1, name='conv5'))
-        model.add(maxPool(3, 3, 2, 2, padding='VALID', name='pool5'))
+        model.add(maxPool(3, 3, 2, 2, padding='valid', name='pool5'))
 
         # 6th layer
         model.add(flatten())
@@ -52,7 +52,7 @@ class AlexNet(object):
         model.add(dropOut(1.0 - self._dropOutProb))
 
         # 8th layer
-        model.add(fullConnect(4096, self._numClass, activation=None, name='fc8'))
+        model.add(fullConnect(4096, self._numClass, activation='softmax', name='fc8'))
 
         return model
 
@@ -63,8 +63,10 @@ class AlexNet(object):
             learningRate=0.01, 
             decayStep=[1000]):
 
-        self._optimizer = tf.keras.optimizers.Adam(learning_rate=learningRate)
-        self._loss = tf.keras.losses.CategoricalCrossentropy()
+        tf.keras.backend.set_learning_phase(True)
+        self._optimizer = tf.keras.optimizers.SGD(learning_rate=learningRate,
+                momentum=0.9, nesterov=True)
+        self._loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         self._model.compile(optimizer=self._optimizer, loss=self._loss,
                 metrics=[tf.keras.metrics.categorical_accuracy])
         self._model.build()
@@ -72,28 +74,33 @@ class AlexNet(object):
 
         curDecayStep = 0
 
+#        self._model.fit(X, Y, batch_size=batchSize, epochs=int(batches*128/5600), 
+#                validation_data=(validX, validY))
+
         for i in range(batches):
             batchIndicies = np.random.choice(X.shape[0], batchSize)
-            curX = X[batchIndicies]
-            curY = Y[batchIndicies]
+            curX = X[batchIndicies].copy()
+            curY = Y[batchIndicies].copy()
             trainResult = self._model.train_on_batch(curX, curY)
 
-            tf.print("Batch: ", i)
+            print("Batch: ", i)
             print("TrainResult: ", dict(zip(self._model.metrics_names, trainResult)))
 
             if i % 10 == 0:
-                self._model.evaluate(validX, validY)
+                evaluateResult = self._model.evaluate(validX, validY)
+                print("Valid: ", dict(zip(self._model.metrics_names, evaluateResult)))
 
-            if i % 50 == 0:
+            if i % 500 == 0:
                 filename = weightsSavePath + "alexnet_" + str(i)
                 self._model.save_weights(filename)
 
             if curDecayStep < len(decayStep) and i == decayStep[curDecayStep]:
-                self._model.optimizer.lr.assign(self._model.optimizer.lr * 0.5)
+                self._model.optimizer.lr.assign(self._model.optimizer.learning_rate * 0.5)
+                curDecayStep += 1
 
     def evaluate(self, X, Y):
+        tf.keras.backend.set_learning_phase(False)
         row = X.shape[0]
-
 
         predictions = self._model.predict(X)
         acc = 0.0
@@ -102,6 +109,8 @@ class AlexNet(object):
             predict = predictions[i]
             maxPred = tf.math.argmax(predict)
             actual = tf.math.argmax(Y[i])
+            
+            print(predict)
 
             metrics[int(actual)][int(maxPred)] += 1
             if int(maxPred) == int(actual):
@@ -113,7 +122,7 @@ class AlexNet(object):
 
 def conv(kernelHeight, kernelWidth, filters, strideY, strideX, padding='SAME', name=None):
     return tf.keras.layers.Conv2D(filters=filters, kernel_size=[kernelHeight, kernelWidth],
-            strides=[strideY, strideX], padding=padding, activation='relu')
+            strides=[strideY, strideX], padding=padding, activation='relu', name=name)
 
 def dropOut(keepProb):
     return tf.keras.layers.Dropout(keepProb)
@@ -123,9 +132,9 @@ def flatten():
 
 def fullConnect(numIn, numOut, name, activation='relu'):
     return tf.keras.layers.Dense(numOut, input_shape=(numIn,),
-            activation=activation)
+            activation=activation, name=name)
 
 def maxPool(kernelHeight, kernelWidth,
         strideY, strideX, padding='SAME', name=None):
     return tf.keras.layers.MaxPool2D(pool_size=(kernelHeight, kernelWidth),
-            strides=(strideY, strideX), padding=padding)
+            strides=(strideY, strideX), padding=padding, name=name)
