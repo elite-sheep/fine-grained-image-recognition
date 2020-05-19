@@ -96,10 +96,11 @@ def main():
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
-    model = AlexNet(inputShape=[227, 227, 3])
-    model.train(weightsSavePath = './bin/exp8/', 
-            batches=8500, batchSize=128, learningRate=0.01, X=trainX, 
-            Y=trainY, validX=validX, validY=validY, decayStep=[3000, 7000])
+    model = AlexNet(inputShape=[227, 227, 3],
+            pretrainedWeights="./pretrained/alexnet_weights.h5")
+    model.train(weightsSavePath = './bin/exp9/', 
+            batches=6500, batchSize=128, learningRate=0.001, X=trainX, 
+            Y=trainY, validX=validX, validY=validY, decayStep=[2400, 5000])
     model.evaluate(testX, testY)
 #
 #    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)

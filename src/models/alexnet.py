@@ -59,6 +59,9 @@ class AlexNet(object):
         # 8th layer
         model.add(fullConnect(None, self._numClass, activation='softmax', name='fc8'))
 
+        if self._pretrainedWeight != None:
+            model.load_weights(self._pretrainedWeight, by_name=True)
+
         return model
 
     def train(self, X, Y, validX, validY, 
@@ -71,7 +74,6 @@ class AlexNet(object):
         self._trainSummaryWriter = tf.summary.create_file_writer(weightsSavePath+'train.log')
 
         tf.keras.backend.set_learning_phase(True)
-#        self._optimizer = tf.keras.optimizers.Adam(learning_rate=learningRate)
         self._optimizer = tf.keras.optimizers.SGD(learning_rate=learningRate,
                 momentum=0.9, nesterov=True)
         self._loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
@@ -81,9 +83,6 @@ class AlexNet(object):
         self._model.summary()
 
         curDecayStep = 0
-
-#        self._model.fit(X, Y, batch_size=batchSize, epochs=int(batches*128/5600), 
-#                validation_data=(validX, validY))
 
         for i in range(batches):
             batchIndicies = np.random.choice(X.shape[0], batchSize)
