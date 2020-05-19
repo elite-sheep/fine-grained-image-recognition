@@ -20,17 +20,22 @@ class AlexNet(object):
 
         model = tf.keras.Sequential()
 
+        # Input and batch normalization
+        model.add(tf.keras.layers.InputLayer(input_shape=self._inputShape))
+
         # 1st layer
-        model.add(tf.keras.layers.Conv2D(input_shape=self._inputShape, 
-            filters=96, kernel_size=[11, 11], strides=[4, 4],
-            activation='relu', padding='valid'))
-        model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-        model.add(maxPool(3, 3, 2, 2, padding='valid', name='pool1'))
+        model.add(tf.keras.layers.Conv2D(filters=96, 
+            kernel_size=[11, 11], strides=[4, 4],
+            activation=None, padding='same'))
+        model.add(tf.keras.layers.LayerNormalization())
+        model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
+        model.add(maxPool(3, 3, 2, 2, padding='same', name='pool1'))
 
         # 2nd layer
-        model.add(conv(5, 5, 256, 1, 1, name='conv2'))
-        model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-        model.add(maxPool(3, 3, 2, 2, padding='valid', name='pool2'))
+        model.add(conv(5, 5, 256, 1, 1, activation=None, name='conv2'))
+        model.add(tf.keras.layers.LayerNormalization())
+        model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
+        model.add(maxPool(3, 3, 2, 2, padding='same', name='pool2'))
 
         # 3rd layer
         model.add(conv(3, 3, 384, 1, 1, name='conv3'))
@@ -40,19 +45,19 @@ class AlexNet(object):
 
         # 5th layer
         model.add(conv(3, 3, 256, 1, 1, name='conv5'))
-        model.add(maxPool(3, 3, 2, 2, padding='valid', name='pool5'))
+        model.add(maxPool(3, 3, 2, 2, padding='same', name='pool5'))
 
         # 6th layer
         model.add(flatten())
-        model.add(fullConnect(6*6*256, 4096, name='fc6'))
+        model.add(fullConnect(None, 4096, name='fc6'))
         model.add(dropOut(1.0 - self._dropOutProb))
 
         # 7th layer
-        model.add(fullConnect(4096, 4096, name='fc7'))
+        model.add(fullConnect(None, 4096, name='fc7'))
         model.add(dropOut(1.0 - self._dropOutProb))
 
         # 8th layer
-        model.add(fullConnect(4096, self._numClass, activation='softmax', name='fc8'))
+        model.add(fullConnect(None, self._numClass, activation='softmax', name='fc8'))
 
         return model
 
@@ -63,7 +68,10 @@ class AlexNet(object):
             learningRate=0.01, 
             decayStep=[1000]):
 
+        self._trainSummaryWriter = tf.summary.create_file_writer(weightsSavePath+'train.log')
+
         tf.keras.backend.set_learning_phase(True)
+#        self._optimizer = tf.keras.optimizers.Adam(learning_rate=learningRate)
         self._optimizer = tf.keras.optimizers.SGD(learning_rate=learningRate,
                 momentum=0.9, nesterov=True)
         self._loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
@@ -95,8 +103,17 @@ class AlexNet(object):
                 self._model.save_weights(filename)
 
             if curDecayStep < len(decayStep) and i == decayStep[curDecayStep]:
-                self._model.optimizer.lr.assign(self._model.optimizer.learning_rate * 0.5)
+                self._model.optimizer.lr.assign(self._model.optimizer.learning_rate * 0.1)
                 curDecayStep += 1
+
+            self.writeLogs(i, self._model.metrics_names, trainResult)
+
+        self._model.save_weights(weightsSavePath+"alexnet.h5")
+
+    def writeLogs(self, batch, names, logs):
+        with self._trainSummaryWriter.as_default():
+            for name, value in zip(names, logs):
+                tf.summary.scalar(name, value, step=batch)
 
     def evaluate(self, X, Y):
         tf.keras.backend.set_learning_phase(False)
@@ -120,9 +137,9 @@ class AlexNet(object):
         print("metrics: ", metrics)
             
 
-def conv(kernelHeight, kernelWidth, filters, strideY, strideX, padding='SAME', name=None):
+def conv(kernelHeight, kernelWidth, filters, strideY, strideX, activation='relu', padding='SAME', name=None):
     return tf.keras.layers.Conv2D(filters=filters, kernel_size=[kernelHeight, kernelWidth],
-            strides=[strideY, strideX], padding=padding, activation='relu', name=name)
+            strides=[strideY, strideX], padding=padding, activation=activation, name=name)
 
 def dropOut(keepProb):
     return tf.keras.layers.Dropout(keepProb)

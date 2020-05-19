@@ -3,6 +3,7 @@
 import cv2 as cv
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 from features.color_histogram import ColorHistogram
 from features.gamma import Gamma
@@ -49,26 +50,29 @@ def loadAllImages(labelFile, prefix):
     df = pd.read_csv(labelFile)
     row, col = df.shape
 
-    resize = (224, 224)
+    resize = (227, 227)
     X = []
-    Y = np.zeros([row, 3], dtype=np.float32)
+    Y = np.zeros([row, 1], dtype=np.int16)
+    gamma1 = Gamma(1.5)
     for i in range(row):
         imageId = df['image_id'][i]
         label = df['label'][i]
         y = getLabelIndex(label)
-        Y[i][y] = 1.0
+        Y[i] = y
         image = cv.imread(prefix+imageId, 1)
-        if image.shape[0] < image.shape[1]:
-            image = cv.rotate(image, cv.ROTATE_90_CLOCKWISE)
-        image = cv.resize(image, resize).astype(np.float32)
+        image = gamma1.extract(image)
+        image = cv.resize(image, resize).astype(np.float64)
         image /= 255.0
         image[:,:,0] = image[:,:,0] - 0.485
         image[:,:,1] = image[:,:,1] - 0.456
         image[:,:,2] = image[:,:,2] - 0.406
         X.append(image)
+        if np.isnan(image).any():
+            print("nan detected")
+            print(imageId)
         print(prefix+imageId)
 
-    return np.array(X), Y
+    return np.array(X), tf.keras.utils.to_categorical(Y)
 
 def main():
     trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
@@ -83,10 +87,10 @@ def main():
     validX = testX[validIndicies]
     validY = testY[validIndicies]
 
-    model = AlexNet()
-    model.train(weightsSavePath = './bin/exp5/', 
-            batches=9000, batchSize=128, learningRate=0.1, X=trainX, 
-            Y=trainY, validX=validX, validY=validY, decayStep=[3480, 5000])
+    model = AlexNet(inputShape=[227, 227, 3])
+    model.train(weightsSavePath = './bin/exp7/', 
+            batches=6500, batchSize=128, learningRate=0.01, X=trainX, 
+            Y=trainY, validX=validX, validY=validY, decayStep=[2400, 5000])
     model.evaluate(testX, testY)
 #
 #    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
