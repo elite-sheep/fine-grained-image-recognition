@@ -1,3 +1,4 @@
 /bin/
 /src/models/__pycache__/
 /src/features/__pycache__/
+/pretrained/
