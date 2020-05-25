@@ -1,5 +1,6 @@
 # Copyright 2020 Yuchen Wang
 
+import os
 import cv2 as cv
 import numpy as np
 import pandas as pd
@@ -8,6 +9,9 @@ import tensorflow as tf
 
 from features.color_histogram import ColorHistogram
 from features.gamma import Gamma
+from PIL import Image
+from PIL import ImageFilter
+from PIL import ImageEnhance
 from models.alexnet import AlexNet
 from models.svm import SVM
 
@@ -81,18 +85,78 @@ def loadAllImages(labelFile, prefix, argument=False):
 
     return np.array(X), tf.keras.utils.to_categorical(np.array(Y))
 
+def cropCenter(image, cropWidth, cropHeight):
+    width, height = image.size
+    return image.crop(((width - cropWidth) // 2, (height - cropHeight) // 2,
+                         (width + cropWidth) // 2, (height + cropHeight) // 2))
+
+def cropMaxSquare(image):
+    return cropCenter(image, min(image.size), min(image.size))
+
+def imagePreprocess(labelFile, pathPrefix):
+    print(labelFile)
+    df = pd.read_csv(labelFile)
+    row, col = df.shape
+    size = 224
+    pathNew = pathPrefix[:-1] + '_preprocess/'
+    os.mkdir(pathNew)
+
+    for i in range(row):
+        imageId = df['image_id'][i]
+        image = Image.open(pathPrefix+imageId)
+        # crop
+        imageNew = cropMaxSquare(image)
+        imageNew = imageNew.resize((size,size),Image.ANTIALIAS)
+        # enhance contrast
+        imageNew = ImageEnhance.Contrast(imageNew).enhance(1.1)
+        # remove white spots
+        imageNew = cv.cvtColor(np.asarray(imageNew),cv.COLOR_RGB2BGR)  # PIL to cv
+        imageNew = cv.fastNlMeansDenoisingColored(imageNew,None,15,10,7,21)
+        # sharpen
+        imageNew = Image.fromarray(cv.cvtColor(imageNew,cv.COLOR_BGR2RGB))  #cv to PIL
+        imageNew = imageNew.filter(ImageFilter.SHARPEN)
+        # edge detection (canny)
+        #imageNew = cv.cvtColor(np.asarray(imageNew),cv.COLOR_RGB2BGR)
+        #imageNew = cv.Canny(imageNew,120,130)
+        #imageNew = Image.fromarray(cv.cvtColor(imageNew,cv.COLOR_BGR2RGB))
+        # save image
+        imageNew.save(pathNew+imageId, quality=100, subsample=0)
+        print(pathNew+imageId)
+
+    return pathNew
+
 def main():
-    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
-    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
-    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
-    validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
+    filePath = '/tmp2/yucwang/data/mongo/'
+    trainLabelFile = filePath + 'train.csv'
+    trainPrefix = filePath + 'C1-P1_Train/'
+    validLabelFile = filePath + 'dev.csv'
+    validPrefix = filePath + 'C1-P1_Dev/'
+
+#    trainPreprocess = imagePreprocess(trainLabelFile, trainPrefix)
+#    validPreprocess = imagePreprocess(validLabelFile, validPrefix)
+#
+#    trainPreprocess = trainPrefix[:-1] + '_preprocess/'
+#    validPreprocess = validPrefix[:-1] + '_preprocess/'
+#    
+#    trainX, trainY = extractFeatures(trainLabelFile, trainPreprocess)
+#    validX, validY = extractFeatures(validLabelFile, validPreprocess)
 
     trainX, trainY = loadAllImages(trainLabelFile, trainPrefix, argument=True)
     testX, testY = loadAllImages(validLabelFile, validPrefix)
 
+    np.save('./train_x.npy', trainX)
+    np.save('./train_y.npy', trainY)
+    np.save('./test_x.npy', testX)
+    np.save('./test_y.npy', testY)
+
     validIndicies = np.random.choice(testX.shape[0], 75)
     validX = testX[validIndicies]
     validY = testY[validIndicies]
+#
+#    trainX = np.load('./bin/exp2/train_x.npz.npy')
+#    trainY = np.load('./bin/exp2/train_y.npz.npy')
+#    validX = np.load('./bin/exp2/test_x.npz.npy')
+#    validY = np.load('./bin/exp2/test_y.npz.npy')
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
@@ -102,19 +166,6 @@ def main():
             batches=6500, batchSize=128, learningRate=0.001, X=trainX, 
             Y=trainY, validX=validX, validY=validY, decayStep=[2400, 5000])
     model.evaluate(testX, testY)
-#
-#    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
-#    validX, validY = extractFeatures(validLabelFile, validPrefix)
-#
-#    np.save('./train_x.npy', trainX)
-#    np.save('./train_y.npy', trainY)
-#    np.save('./val_x.npy', validX)
-#    np.save('./val_y.npy', validY)
-
-#    trainX = np.load('./bin/exp2/train_x.npz.npy')
-#    trainY = np.load('./bin/exp2/train_y.npz.npy')
-#    validX = np.load('./bin/exp2/val_x.npz.npy')
-#    validY = np.load('./bin/exp2/val_y.npz.npy')
 #
 #    model = SVM(penalty='l2', loss='squared_hinge',
 #            C=0.85, maxIter=2000)

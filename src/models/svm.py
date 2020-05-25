@@ -44,8 +44,12 @@ class SVM():
             if  prediction[i] == Y[i]:
                 acc += 1.0
             metrics[int(Y[i])][int(prediction[i])] += 1
-        
-        return acc / dataSize, metrics
+
+        war = 0.0
+        for i in range(classNum):
+            war += float(metrics[i][i]) / np.sum(metrics[:,i]) * np.sum(metrics[i,:]) / np.sum(metrics)
+
+        return acc / dataSize, war, metrics
 
     def test(self, X):
         if self._isTrained == False:
