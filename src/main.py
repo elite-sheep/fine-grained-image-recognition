@@ -146,12 +146,17 @@ def main():
 
     np.save('./train_x.npy', trainX)
     np.save('./train_y.npy', trainY)
-    np.save('./val_x.npy', validX)
-    np.save('./val_y.npy', validY)
+    np.save('./test_x.npy', testX)
+    np.save('./test_y.npy', testY)
 
     validIndicies = np.random.choice(testX.shape[0], 75)
     validX = testX[validIndicies]
     validY = testY[validIndicies]
+#
+#    trainX = np.load('./bin/exp2/train_x.npz.npy')
+#    trainY = np.load('./bin/exp2/train_y.npz.npy')
+#    validX = np.load('./bin/exp2/test_x.npz.npy')
+#    validY = np.load('./bin/exp2/test_y.npz.npy')
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
@@ -161,11 +166,6 @@ def main():
             batches=6500, batchSize=128, learningRate=0.001, X=trainX, 
             Y=trainY, validX=validX, validY=validY, decayStep=[2400, 5000])
     model.evaluate(testX, testY)
-#
-#    trainX = np.load('./bin/exp2/train_x.npz.npy')
-#    trainY = np.load('./bin/exp2/train_y.npz.npy')
-#    validX = np.load('./bin/exp2/val_x.npz.npy')
-#    validY = np.load('./bin/exp2/val_y.npz.npy')
 #
 #    model = SVM(penalty='l2', loss='squared_hinge',
 #            C=0.85, maxIter=2000)
