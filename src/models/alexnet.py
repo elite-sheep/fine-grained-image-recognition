@@ -64,6 +64,9 @@ class AlexNet(object):
 
         return model
 
+    def loadWeights(self, weightsPath):
+        self._model.load_weights(weightsPath, by_name=True)
+
     def train(self, X, Y, validX, validY, 
             weightsSavePath,
             batches = 20000,
