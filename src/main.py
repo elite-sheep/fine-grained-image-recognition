@@ -7,13 +7,15 @@ import pandas as pd
 import random as rd
 import tensorflow as tf
 
-from features.color_histogram import ColorHistogram
-from features.gamma import Gamma
 from PIL import Image
 from PIL import ImageFilter
 from PIL import ImageEnhance
+
+from features.color_histogram import ColorHistogram
+from features.gamma import Gamma
 from models.alexnet import AlexNet
 from models.svm import SVM
+from models.kernel_svm import KernelSVM
 
 def getLabelIndex(label):
     if label == 'A':
@@ -169,12 +171,14 @@ def main():
 #
 #    model = SVM(penalty='l2', loss='squared_hinge',
 #            C=0.85, maxIter=2000)
+#    model = KernelSVM(max_iter=-1, grid_search=True)
 #    print("SVM: Training get started.")
 #    model.train(trainX, trainY)
 #
 #    print("SVM: Validation get started.")
-#    acc, metrics = model.valid(validX, validY, classNum=3)
+#    acc, war, metrics = model.valid(validX, validY, classNum=3)
 #    print(acc)
+#    print(war)
 #    print(metrics)
 
 main()
