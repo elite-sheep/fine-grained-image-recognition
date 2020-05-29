@@ -31,6 +31,7 @@ def extractFeatures(labelFile, pathPrefix):
 
     X = np.empty([row, 2*4*4*16*3])
     Y = np.zeros([row], dtype=np.int16)
+    filenameList = []
     for i in range(10):
         imageId = df['image_id'][i]
         label = df['label'][i]
@@ -43,11 +44,10 @@ def extractFeatures(labelFile, pathPrefix):
         X[i][0:768] = colorHist.extract(image1, normalize=True)
         X[i][768:1536] = colorHist.extract(image2, normalize=True)
         X[i] /= np.linalg.norm(X[i])
+        
+        filenameList.append(pathPrefix+imageId)
 
-
-        print(pathPrefix+imageId)
-
-    return np.array(X), Y
+    return np.array(X), Y, filenameList
 
 def loadAllImages(labelFile, prefix, argument=False):
     df = pd.read_csv(labelFile)
@@ -56,39 +56,44 @@ def loadAllImages(labelFile, prefix, argument=False):
     resize = (227, 227)
     X = []
     Y = []
-    gamma1 = Gamma(1.5)
+    filenameList = []
+    gamma1 = Gamma(1.6)
     for i in range(row):
         imageId = df['image_id'][i]
         label = df['label'][i]
         y = getLabelIndex(label)
         image = cv.imread(prefix+imageId, 1)
         image = gamma1.extract(image)
+
+        if row > col:
+            image = cv.rotate(image, cv.ROTATE_90_CLOCKWISE)
         image = cv.resize(image, resize).astype(np.float64)
         image /= 255.0
-        image[:,:,0] = image[:,:,0] - 0.485
-        image[:,:,1] = image[:,:,1] - 0.456
-        image[:,:,2] = image[:,:,2] - 0.406
+        image[:,:,0] = image[:,:,0] - 0.264
+        image[:,:,1] = image[:,:,1] - 0.294
+        image[:,:,2] = image[:,:,2] - 0.506
 
         sample = rd.uniform(0.0, 1.0)
-        if sample < 0.3 and argument == True:
+        if sample < 0.4 and argument == True:
             flipedImage = cv.flip(image, -1)
             X.append(flipedImage)
             Y.append(y)
 
         X.append(image)
         Y.append(y)
+        filenameList.append(prefix+imageId)
         print(prefix+imageId)
 
-    return np.array(X), tf.keras.utils.to_categorical(np.array(Y))
+    return np.array(X), tf.keras.utils.to_categorical(np.array(Y)), filenameList
 
 def main():
-    trainLabelFile = '/tmp2/yucwang/data/mongo/train.csv'
-    trainPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Train/'
-    validLabelFile = '/tmp2/yucwang/data/mongo/dev.csv'
-    validPrefix = '/tmp2/yucwang/data/mongo/C1-P1_Dev/'
+    trainLabelFile = '/tmp2/yucwang/data/mongo_data/train.csv'
+    trainPrefix = '/tmp2/yucwang/data/mongo_data/C1-P1_Train/'
+    validLabelFile = '/tmp2/yucwang/data/mongo_data/dev.csv'
+    validPrefix = '/tmp2/yucwang/data/mongo_data/C1-P1_Dev/'
 
-    trainX, trainY = loadAllImages(trainLabelFile, trainPrefix, argument=True)
-    testX, testY = loadAllImages(validLabelFile, validPrefix)
+    trainX, trainY, trainFiles = loadAllImages(trainLabelFile, trainPrefix, argument=True)
+    testX, testY, files = loadAllImages(validLabelFile, validPrefix)
 
     validIndicies = np.random.choice(testX.shape[0], 75)
     validX = testX[validIndicies]
@@ -96,12 +101,12 @@ def main():
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
-    model = AlexNet(inputShape=[227, 227, 3],
-            pretrainedWeights="./pretrained/alexnet_weights.h5")
-    model.train(weightsSavePath = './bin/exp9/', 
-            batches=6500, batchSize=128, learningRate=0.001, X=trainX, 
-            Y=trainY, validX=validX, validY=validY, decayStep=[2400, 5000])
-    model.evaluate(testX, testY)
+    model = AlexNet(inputShape=[227, 227, 3])
+    model.loadWeights('./pretrained/alexnet_weights.h5')
+    model.train(weightsSavePath = './bin/exp12/', 
+            batches=18000, batchSize=128, learningRate=0.001, X=trainX, 
+            Y=trainY, validX=validX, validY=validY, decayStep=[6400])
+    model.evaluate(testX, testY, files)
 #
 #    trainX, trainY = extractFeatures(trainLabelFile, trainPrefix)
 #    validX, validY = extractFeatures(validLabelFile, validPrefix)

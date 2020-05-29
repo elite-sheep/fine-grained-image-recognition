@@ -78,7 +78,7 @@ class AlexNet(object):
 
         tf.keras.backend.set_learning_phase(True)
         self._optimizer = tf.keras.optimizers.SGD(learning_rate=learningRate,
-                momentum=0.9, nesterov=True)
+                momentum=0.9, nesterov=False)
         self._loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         self._model.compile(optimizer=self._optimizer, loss=self._loss,
                 metrics=[tf.keras.metrics.categorical_accuracy])
@@ -117,7 +117,7 @@ class AlexNet(object):
             for name, value in zip(names, logs):
                 tf.summary.scalar(name, value, step=batch)
 
-    def evaluate(self, X, Y):
+    def evaluate(self, X, Y, files):
         tf.keras.backend.set_learning_phase(False)
         row = X.shape[0]
 
@@ -129,11 +129,11 @@ class AlexNet(object):
             maxPred = tf.math.argmax(predict)
             actual = tf.math.argmax(Y[i])
             
-            print(predict)
-
             metrics[int(actual)][int(maxPred)] += 1
             if int(maxPred) == int(actual):
                 acc += 1.0
+            else:
+                print('{} {} {} {}'.format(files[i], predict, actual, maxPred))
 
         print("accuracy: ", acc/row)
         print("metrics: ", metrics)
