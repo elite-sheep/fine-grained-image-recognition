@@ -6,15 +6,15 @@ import pandas as pd
 import random as rd
 import tensorflow as tf
 
-from PIL import Image
-from PIL import ImageFilter
-from PIL import ImageEnhance
+#from PIL import Image
+#from PIL import ImageFilter
+#from PIL import ImageEnhance
 
 from features.color_histogram import ColorHistogram
 from features.gamma import Gamma
 from models.alexnet import AlexNet
 from models.svm import SVM
-from models.kernel_svm import KernelSVM
+#from models.kernel_svm import KernelSVM
 
 def getLabelIndex(label):
     if label == 'A':
@@ -62,7 +62,7 @@ def loadAllImages(labelFile, prefix, argument=False):
     X = []
     Y = []
     filenameList = []
-    gamma1 = Gamma(1.6)
+    gamma1 = Gamma(1.28)
     for i in range(row):
         imageId = df['image_id'][i]
         label = df['label'][i]
@@ -108,8 +108,8 @@ def main():
 
     model = AlexNet(inputShape=[227, 227, 3])
     model.loadWeights('./pretrained/alexnet_weights.h5')
-    model.train(weightsSavePath = './bin/exp12/', 
-            batches=18000, batchSize=128, learningRate=0.001, X=trainX, 
+    model.train(weightsSavePath = './bin/exp11/', 
+            batches=24000, batchSize=128, learningRate=0.001, X=trainX, 
             Y=trainY, validX=validX, validY=validY, decayStep=[6400])
     model.evaluate(testX, testY, files)
 #

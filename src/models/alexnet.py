@@ -20,31 +20,37 @@ class AlexNet(object):
 
         model = tf.keras.Sequential()
 
+        regularizer = tf.keras.regularizers.l2(l=0.01)
+
         # Input and batch normalization
         model.add(tf.keras.layers.InputLayer(input_shape=self._inputShape))
 
         # 1st layer
         model.add(tf.keras.layers.Conv2D(filters=96, 
             kernel_size=[11, 11], strides=[4, 4],
-            activation=None, padding='same'))
+            activation=None, padding='same', kernel_regularizer=regularizer))
         model.add(tf.keras.layers.LayerNormalization())
         model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool1'))
 
         # 2nd layer
-        model.add(conv(5, 5, 256, 1, 1, activation=None, name='conv2'))
+        model.add(conv(5, 5, 256, 1, 1, activation=None, 
+            kernelRegularizer=regularizer, name='conv2'))
         model.add(tf.keras.layers.LayerNormalization())
         model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool2'))
 
         # 3rd layer
-        model.add(conv(3, 3, 384, 1, 1, name='conv3'))
+        model.add(conv(3, 3, 384, 1, 1, 
+            kernelRegularizer=regularizer, name='conv3'))
 
         # 4th layer
-        model.add(conv(3, 3, 256, 1, 1, name='conv4'))
+        model.add(conv(3, 3, 256, 1, 1, 
+            kernelRegularizer=regularizer, name='conv4'))
 
         # 5th layer
-        model.add(conv(3, 3, 256, 1, 1, name='conv5'))
+        model.add(conv(3, 3, 256, 1, 1, 
+            kernelRegularizer=regularizer, name='conv5'))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool5'))
 
         # 6th layer
@@ -78,7 +84,7 @@ class AlexNet(object):
 
         tf.keras.backend.set_learning_phase(True)
         self._optimizer = tf.keras.optimizers.SGD(learning_rate=learningRate,
-                momentum=0.9, nesterov=False)
+                momentum=0.9, nesterov=True)
         self._loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         self._model.compile(optimizer=self._optimizer, loss=self._loss,
                 metrics=[tf.keras.metrics.categorical_accuracy])
@@ -139,9 +145,11 @@ class AlexNet(object):
         print("metrics: ", metrics)
             
 
-def conv(kernelHeight, kernelWidth, filters, strideY, strideX, activation='relu', padding='SAME', name=None):
+def conv(kernelHeight, kernelWidth, filters, strideY, strideX, activation='relu', 
+        padding='SAME', kernelRegularizer=None, name=None):
     return tf.keras.layers.Conv2D(filters=filters, kernel_size=[kernelHeight, kernelWidth],
-            strides=[strideY, strideX], padding=padding, activation=activation, name=name)
+            strides=[strideY, strideX], padding=padding, activation=activation, 
+            kernel_regularizer=kernelRegularizer ,name=name)
 
 def dropOut(keepProb):
     return tf.keras.layers.Dropout(keepProb)
