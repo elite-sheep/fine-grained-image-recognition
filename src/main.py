@@ -7,15 +7,16 @@ import pandas as pd
 import random as rd
 import tensorflow as tf
 
-from PIL import Image
-from PIL import ImageFilter
-from PIL import ImageEnhance
+#from PIL import Image
+#from PIL import ImageFilter
+#from PIL import ImageEnhance
 
 from features.color_histogram import ColorHistogram
 from features.gamma import Gamma
 from models.alexnet import AlexNet
+from models.googlenet import GoogleNet
 from models.svm import SVM
-from models.kernel_svm import KernelSVM
+#from models.kernel_svm import KernelSVM
 
 def getLabelIndex(label):
     if label == 'A':
@@ -59,24 +60,24 @@ def loadAllImages(labelFile, prefix, argument=False):
     df = pd.read_csv(labelFile)
     row, col = df.shape
 
-    resize = (227, 227)
+    resize = (224, 224)
     X = []
     Y = []
-    gamma1 = Gamma(1.5)
+    gamma1 = Gamma(1.6)
     for i in range(row):
         imageId = df['image_id'][i]
         label = df['label'][i]
         y = getLabelIndex(label)
         image = cv.imread(prefix+imageId, 1)
         image = gamma1.extract(image)
-        image = cv.resize(image, resize).astype(np.float64)
+        image = cv.resize(image, resize).astype(np.float32)
         image /= 255.0
-        image[:,:,0] = image[:,:,0] - 0.485
-        image[:,:,1] = image[:,:,1] - 0.456
-        image[:,:,2] = image[:,:,2] - 0.406
+        image[:,:,0] = image[:,:,0] - 0.264
+        image[:,:,1] = image[:,:,1] - 0.294
+        image[:,:,2] = image[:,:,2] - 0.506
 
         sample = rd.uniform(0.0, 1.0)
-        if sample < 0.3 and argument == True:
+        if sample < 0.4 and argument == True:
             flipedImage = cv.flip(image, -1)
             X.append(flipedImage)
             Y.append(y)
@@ -128,7 +129,7 @@ def imagePreprocess(labelFile, pathPrefix):
     return pathNew
 
 def main():
-    filePath = '/tmp2/yucwang/data/mongo/'
+    filePath = '/tmp2/yucwang/data/mongo_data/'
     trainLabelFile = filePath + 'train.csv'
     trainPrefix = filePath + 'C1-P1_Train/'
     validLabelFile = filePath + 'dev.csv'
@@ -146,12 +147,7 @@ def main():
     trainX, trainY = loadAllImages(trainLabelFile, trainPrefix, argument=True)
     testX, testY = loadAllImages(validLabelFile, validPrefix)
 
-    np.save('./train_x.npy', trainX)
-    np.save('./train_y.npy', trainY)
-    np.save('./test_x.npy', testX)
-    np.save('./test_y.npy', testY)
-
-    validIndicies = np.random.choice(testX.shape[0], 75)
+    validIndicies = np.random.choice(testX.shape[0], 80)
     validX = testX[validIndicies]
     validY = testY[validIndicies]
 #
@@ -162,11 +158,12 @@ def main():
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
-    model = AlexNet(inputShape=[227, 227, 3],
-            pretrainedWeights="./pretrained/alexnet_weights.h5")
-    model.train(weightsSavePath = './bin/exp9/', 
-            batches=6500, batchSize=128, learningRate=0.001, X=trainX, 
-            Y=trainY, validX=validX, validY=validY, decayStep=[2400, 5000])
+    model = GoogleNet(inputShape=[224, 224, 3])
+    model.train(weightsSavePath = './bin/exp13/', 
+            batches=18000, batchSize=64, learningRate=0.01, X=trainX, 
+            Y=trainY, validX=validX, validY=validY, 
+            decayStep=[800, 1600, 2400, 3200, 4800, 5600, 6400, 7200,
+                8000, 9000, 12000])
     model.evaluate(testX, testY)
 #
 #    model = SVM(penalty='l2', loss='squared_hinge',
