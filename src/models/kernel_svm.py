@@ -7,38 +7,38 @@ from sklearn.grid_search import GridSearchCV
 
 class KernelSVM():
     def __init__(self, C = '1.0',
-	    gamma = 0.001,
-	    kernel = 'rbf',
-	    max_iter = -1,
-	    grid_search = False):
+        gamma = 0.001,
+        kernel = 'rbf',
+        max_iter = -1,
+        grid_search = False):
         self._isTrained = False
         self._C = C
-	self._gamma = gamma
-	self._kernel = kernel
-	self._max_iter = max_iter
-	self._grid_search = grid_search
+        self._gamma = gamma
+        self._kernel = kernel
+        self._max_iter = max_iter
+        self._grid_search = grid_search
         self._model = SVC(C=self._C,
-		gamma=self._gamma,
-		kernel=self._kernel,
-		max_iter=self._max_iter,
-		decision_function_shape='ovr')
+        gamma=self._gamma,
+        kernel=self._kernel,
+        max_iter=self._max_iter,
+        decision_function_shape='ovr')
 
     def train(self, X, Y):
         if self._isTrained == True:
             print("SVM:: model have been trained.")
             return
 
-	if self._grid_search == True:
-	    model = SVC(kernel=self._kernel,max_iter=self._max_iter)
-    	    paramGrid = {'C':[1.0,2.0,3.0,4.0],'gamma':[0.01,0.1,0.3,0.5,0.6]}
+        if self._grid_search == True:
+            model = SVC(kernel=self._kernel,max_iter=self._max_iter)
+            paramGrid = {'C':[1.0,2.0,3.0,4.0],'gamma':[0.01,0.1,0.3,0.5,0.6]}
             gridSearch = GridSearchCV(model,paramGrid)
             gridSearch.fit(X, Y)
             bestParams = gridSearch.best_estimator_.get_params()
-	    for para, val in bestParams.items():
-		print(para,val)
-	    self._C = bestParams['C']
-	    self._gamma = bestParams['gamma']
-	    self._model = SVC(C=self._C,gamma=self._gamma)
+            for para, val in bestParams.items():
+                print(para,val)
+                self._C = bestParams['C']
+                self._gamma = bestParams['gamma']
+                self._model = SVC(C=self._C,gamma=self._gamma)
 
         self._model.fit(X, Y)
         self._isTrained = True

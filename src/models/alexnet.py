@@ -20,31 +20,37 @@ class AlexNet(object):
 
         model = tf.keras.Sequential()
 
+        regularizer = tf.keras.regularizers.l2(l=0.01)
+
         # Input and batch normalization
         model.add(tf.keras.layers.InputLayer(input_shape=self._inputShape))
 
         # 1st layer
         model.add(tf.keras.layers.Conv2D(filters=96, 
             kernel_size=[11, 11], strides=[4, 4],
-            activation=None, padding='same'))
+            activation=None, padding='same', kernel_regularizer=regularizer))
         model.add(tf.keras.layers.LayerNormalization())
         model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool1'))
 
         # 2nd layer
-        model.add(conv(5, 5, 256, 1, 1, activation=None, name='conv2'))
+        model.add(conv(5, 5, 256, 1, 1, activation=None, 
+            kernelRegularizer=regularizer, name='conv2'))
         model.add(tf.keras.layers.LayerNormalization())
         model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool2'))
 
         # 3rd layer
-        model.add(conv(3, 3, 384, 1, 1, name='conv3'))
+        model.add(conv(3, 3, 384, 1, 1, 
+            kernelRegularizer=regularizer, name='conv3'))
 
         # 4th layer
-        model.add(conv(3, 3, 256, 1, 1, name='conv4'))
+        model.add(conv(3, 3, 256, 1, 1, 
+            kernelRegularizer=regularizer, name='conv4'))
 
         # 5th layer
-        model.add(conv(3, 3, 256, 1, 1, name='conv5'))
+        model.add(conv(3, 3, 256, 1, 1, 
+            kernelRegularizer=regularizer, name='conv5'))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool5'))
 
         # 6th layer
@@ -63,6 +69,9 @@ class AlexNet(object):
             model.load_weights(self._pretrainedWeight, by_name=True)
 
         return model
+
+    def loadWeights(self, weightsPath):
+        self._model.load_weights(weightsPath, by_name=True)
 
     def train(self, X, Y, validX, validY, 
             weightsSavePath,
@@ -114,7 +123,7 @@ class AlexNet(object):
             for name, value in zip(names, logs):
                 tf.summary.scalar(name, value, step=batch)
 
-    def evaluate(self, X, Y):
+    def evaluate(self, X, Y, files):
         tf.keras.backend.set_learning_phase(False)
         row = X.shape[0]
 
@@ -126,19 +135,21 @@ class AlexNet(object):
             maxPred = tf.math.argmax(predict)
             actual = tf.math.argmax(Y[i])
             
-            print(predict)
-
             metrics[int(actual)][int(maxPred)] += 1
             if int(maxPred) == int(actual):
                 acc += 1.0
+            else:
+                print('{} {} {} {}'.format(files[i], predict, actual, maxPred))
 
         print("accuracy: ", acc/row)
         print("metrics: ", metrics)
             
 
-def conv(kernelHeight, kernelWidth, filters, strideY, strideX, activation='relu', padding='SAME', name=None):
+def conv(kernelHeight, kernelWidth, filters, strideY, strideX, activation='relu', 
+        padding='SAME', kernelRegularizer=None, name=None):
     return tf.keras.layers.Conv2D(filters=filters, kernel_size=[kernelHeight, kernelWidth],
-            strides=[strideY, strideX], padding=padding, activation=activation, name=name)
+            strides=[strideY, strideX], padding=padding, activation=activation, 
+            kernel_regularizer=kernelRegularizer ,name=name)
 
 def dropOut(keepProb):
     return tf.keras.layers.Dropout(keepProb)
