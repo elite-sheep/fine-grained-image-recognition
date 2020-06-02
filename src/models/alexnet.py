@@ -53,6 +53,10 @@ class AlexNet(object):
             kernelRegularizer=regularizer, name='conv5'))
         model.add(maxPool(3, 3, 2, 2, padding='same', name='pool5'))
 
+        # global average pooling
+        model.add(tf.keras.layers.GlobalAveragePooling2D(name='GAP'))
+
+        '''
         # 6th layer
         model.add(flatten())
         model.add(fullConnect(None, 4096, name='fc6'))
@@ -61,6 +65,7 @@ class AlexNet(object):
         # 7th layer
         model.add(fullConnect(None, 4096, name='fc7'))
         model.add(dropOut(1.0 - self._dropOutProb))
+        '''
 
         # 8th layer
         model.add(fullConnect(None, self._numClass, activation='softmax', name='fc8'))
