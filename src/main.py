@@ -15,6 +15,7 @@ from features.color_histogram import ColorHistogram
 from features.gamma import Gamma
 from models.alexnet import AlexNet
 from models.googlenet import GoogleNet
+from models.inception_resnet import InceptionResnet
 from models.svm import SVM
 #from models.kernel_svm import KernelSVM
 
@@ -63,6 +64,7 @@ def loadAllImages(labelFile, prefix, argument=False):
     resize = (224, 224)
     X = []
     Y = []
+    files = []
     gamma1 = Gamma(1.6)
     for i in range(row):
         imageId = df['image_id'][i]
@@ -72,9 +74,15 @@ def loadAllImages(labelFile, prefix, argument=False):
         image = gamma1.extract(image)
         image = cv.resize(image, resize).astype(np.float32)
         image /= 255.0
-        image[:,:,0] = image[:,:,0] - 0.264
-        image[:,:,1] = image[:,:,1] - 0.294
-        image[:,:,2] = image[:,:,2] - 0.506
+
+        mean, stddev = cv.meanStdDev(image)
+        image[:,:,0] = (image[:,:,0] - mean[0]) / stddev[0]
+        image[:,:,1] = (image[:,:,1] - mean[1]) / stddev[1]
+        image[:,:,2] = (image[:,:,2] - mean[2]) / stddev[2]
+
+#        image[:,:,0] = image[:,:,0] - 0.264
+#        image[:,:,1] = image[:,:,1] - 0.294
+#        image[:,:,2] = image[:,:,2] - 0.506
 
         sample = rd.uniform(0.0, 1.0)
         if sample < 0.4 and argument == True:
@@ -84,9 +92,10 @@ def loadAllImages(labelFile, prefix, argument=False):
 
         X.append(image)
         Y.append(y)
+        files.append(prefix+imageId)
         print(prefix+imageId)
 
-    return np.array(X), tf.keras.utils.to_categorical(np.array(Y))
+    return np.array(X), tf.keras.utils.to_categorical(np.array(Y)), files
 
 def cropCenter(image, cropWidth, cropHeight):
     width, height = image.size
@@ -137,17 +146,17 @@ def main():
 
 #    trainPreprocess = imagePreprocess(trainLabelFile, trainPrefix)
 #    validPreprocess = imagePreprocess(validLabelFile, validPrefix)
-#
+##
 #    trainPreprocess = trainPrefix[:-1] + '_preprocess/'
 #    validPreprocess = validPrefix[:-1] + '_preprocess/'
 #    
 #    trainX, trainY = extractFeatures(trainLabelFile, trainPreprocess)
 #    validX, validY = extractFeatures(validLabelFile, validPreprocess)
 
-    trainX, trainY = loadAllImages(trainLabelFile, trainPrefix, argument=True)
-    testX, testY = loadAllImages(validLabelFile, validPrefix)
+    trainX, trainY, trainFiles = loadAllImages(trainLabelFile, trainPrefix, argument=True)
+    testX, testY, testFiles = loadAllImages(validLabelFile, validPrefix)
 
-    validIndicies = np.random.choice(testX.shape[0], 80)
+    validIndicies = np.random.choice(testX.shape[0], 160)
     validX = testX[validIndicies]
     validY = testY[validIndicies]
 #
@@ -158,13 +167,12 @@ def main():
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
-    model = GoogleNet(inputShape=[224, 224, 3])
-    model.train(weightsSavePath = './bin/exp13/', 
-            batches=18000, batchSize=64, learningRate=0.01, X=trainX, 
-            Y=trainY, validX=validX, validY=validY, 
-            decayStep=[800, 1600, 2400, 3200, 4800, 5600, 6400, 7200,
-                8000, 9000, 12000])
-    model.evaluate(testX, testY)
+    model = InceptionResnet(inputShape=[224, 224, 3])
+    model.loadWeights('./bin/exp26/googlenet_1500.h5')
+    model.train(weightsSavePath = './bin/exp27/', 
+           batches=32000, batchSize=32, learningRate=0.045, X=trainX, 
+            Y=trainY, validX=validX, validY=validY)
+    model.evaluate(testX, testY, testFiles)
 #
 #    model = SVM(penalty='l2', loss='squared_hinge',
 #            C=0.85, maxIter=2000)

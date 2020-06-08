@@ -57,9 +57,9 @@ class Inception(tf.keras.layers.Layer):
         return tf.keras.layers.concatenate([pathway0, pathway1, pathway2, pathway3],
                 axis=self._concatAxis)
 
-class GoogleNet(object):
+class InceptionResnet(object):
     def __init__(self, 
-            inputShape=[224, 224, 3],
+            inputShape=[299, 299, 3],
             numClass=3,
             dropOutProb=0.2,
             pretrainedWeights=None):
@@ -71,50 +71,10 @@ class GoogleNet(object):
         self._model = self.buildUpModel()
 
     def buildUpModel(self):
-        model = tf.keras.Sequential()
-
-        # Input Layer
-        model.add(tf.keras.layers.InputLayer(input_shape=self._inputShape))
-
-        # 1st layer
-        model.add(conv(7, 7, 64, 2, 2, activation=None, name='conv1'))
-        model.add(tf.keras.layers.LayerNormalization())
-        model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
-        model.add(maxPool(3, 3, 2, 2, padding='same', name='pool1'))
-
-        # 2nd layer
-        model.add(conv(1, 1, 64, 1, 1, activation=None, padding='same', name='conv2'))
-        model.add(tf.keras.layers.LayerNormalization())
-        model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
-
-        # 3rd layer
-        model.add(conv(3, 3, 192, 1, 1, activation=None, padding='same', name='conv3'))
-        model.add(tf.keras.layers.LayerNormalization())
-        model.add(tf.keras.layers.LeakyReLU(alpha=0.1))
-
-        # Inception groups 1
-        model.add(Inception([(64,), (96, 128), (16, 32), (32,)]))
-        model.add(Inception([(128,), (128, 192), (32, 96), (64,)]))
-        model.add(maxPool(3, 3, 2, 2, padding='same', name='pool3'))
-
-        # Inception groups 2
-        model.add(Inception([(192,), (96, 208), (16, 48), (64,)]))
-        model.add(Inception([(160,), (112, 224), (24, 64), (64,)]))
-        model.add(Inception([(128,), (128, 256), (24, 64), (64,)]))
-        model.add(Inception([(112,), (144, 288), (32, 64), (64,)]))
-        model.add(Inception([(256,), (160, 360), (32, 128), (128,)]))
-        model.add(maxPool(3, 3, 2, 2, padding='same'))
-
-        # Inception groups 3
-        model.add(Inception([(256,), (160, 320), (32, 128), (128,)]))
-        model.add(Inception([(384,), (192, 384), (48, 128), (128,)]))
-        model.add(tf.keras.layers.AveragePooling2D(pool_size=(7,7), strides=1, padding='valid'))
-
-        # Output phase
-        model.add(flatten())
-        model.add(dropOut(self._dropOutProb))
-        model.add(fullConnect(None, self._numClass, activation='linear', name='fc1'))
-        model.add(fullConnect(None, self._numClass, activation='softmax', name='fc2'))
+        model = tf.keras.applications.InceptionResNetV2(
+            input_shape=self._inputShape,
+            weights = None,
+            classes = self._numClass)
 
         return model
 
@@ -135,7 +95,6 @@ class GoogleNet(object):
         self._loss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
         self._model.compile(optimizer=self._optimizer, loss=self._loss,
                 metrics=[tf.keras.metrics.categorical_accuracy])
-        self._model.build()
         self._model.summary()
 
         curDecayStep = 0
@@ -157,7 +116,7 @@ class GoogleNet(object):
                 filename = weightsSavePath + "googlenet_" + str(i) + '.h5'
                 self._model.save_weights(filename)
 
-            if i % 450 == 0:
+            if i % 500 == 0:
                 self._model.optimizer.lr.assign(self._model.optimizer.learning_rate * 0.94)
 
             self.writeLogs(i, self._model.metrics_names, trainResult)
