@@ -16,6 +16,7 @@ from features.gamma import Gamma
 from models.alexnet import AlexNet
 from models.googlenet import GoogleNet
 from models.inception_resnet import InceptionResnet
+from models.alexgoogle import AlexGoogle
 from models.svm import SVM
 #from models.kernel_svm import KernelSVM
 
@@ -76,13 +77,13 @@ def loadAllImages(labelFile, prefix, argument=False):
         image /= 255.0
 
         mean, stddev = cv.meanStdDev(image)
-        image[:,:,0] = (image[:,:,0] - mean[0]) / stddev[0]
-        image[:,:,1] = (image[:,:,1] - mean[1]) / stddev[1]
-        image[:,:,2] = (image[:,:,2] - mean[2]) / stddev[2]
+#        image[:,:,0] = (image[:,:,0] - mean[0]) / stddev[0]
+#        image[:,:,1] = (image[:,:,1] - mean[1]) / stddev[1]
+#        image[:,:,2] = (image[:,:,2] - mean[2]) / stddev[2]
 
-#        image[:,:,0] = image[:,:,0] - 0.264
-#        image[:,:,1] = image[:,:,1] - 0.294
-#        image[:,:,2] = image[:,:,2] - 0.506
+        image[:,:,0] = image[:,:,0] - 0.264
+        image[:,:,1] = image[:,:,1] - 0.294
+        image[:,:,2] = image[:,:,2] - 0.506
 
         sample = rd.uniform(0.0, 1.0)
         if sample < 0.4 and argument == True:
@@ -138,7 +139,8 @@ def imagePreprocess(labelFile, pathPrefix):
     return pathNew
 
 def main():
-    filePath = '/tmp2/yucwang/data/mongo_data/'
+    
+    filePath = '/tmp2/r08922152/mongo/'
     trainLabelFile = filePath + 'train.csv'
     trainPrefix = filePath + 'C1-P1_Train/'
     validLabelFile = filePath + 'dev.csv'
@@ -155,7 +157,21 @@ def main():
 
     trainX, trainY, trainFiles = loadAllImages(trainLabelFile, trainPrefix, argument=True)
     testX, testY, testFiles = loadAllImages(validLabelFile, validPrefix)
+    '''
+    np.save('./train_x.npy',trainX)
+    np.save('./train_y.npy',trainY)
+    np.save('./test_x.npy',testX)
+    np.save('./test_y.npy',testY)
+    np.save('./trainFiles.npy',trainFiles)
+    np.save('./testFiles.npy',testFiles)
 
+    trainX = np.load('./train_x.npy')
+    trainY = np.load('./train_y.npy')
+    testX = np.load('./test_x.npy')
+    testY = np.load('./test_y.npy')
+    trainFiles = np.load('./trainFiles.npy')
+    testFiles = np.load('./testFiles.npy')
+    '''
     validIndicies = np.random.choice(testX.shape[0], 160)
     validX = testX[validIndicies]
     validY = testY[validIndicies]
@@ -167,10 +183,10 @@ def main():
 
     print('Training with {} images.'.format(trainY.shape[0]))
 
-    model = InceptionResnet(inputShape=[224, 224, 3])
-    model.loadWeights('./bin/exp26/googlenet_1500.h5')
-    model.train(weightsSavePath = './bin/exp27/', 
-           batches=32000, batchSize=32, learningRate=0.045, X=trainX, 
+    model = AlexGoogle(inputShape=[224,224,3])
+#    model.loadWeights('/tmp2/googlenet.log')
+    model.train(weightsSavePath = '/tmp2/exp7/', 
+           batches=24000, batchSize=32, learningRate=0.045, X=trainX,
             Y=trainY, validX=validX, validY=validY)
     model.evaluate(testX, testY, testFiles)
 #
